@@ -96,19 +96,19 @@
 
 
 
-  <meta name="description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析。其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOExceptio">
+  <meta name="description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
 <meta name="keywords" content="源码分析">
 <meta property="og:type" content="article">
 <meta property="og:title" content="okhttp源码分析">
 <meta property="og:url" content="https://hujian222.github.io/2019/07/09/okhttp源码分析/index.html">
 <meta property="og:site_name" content="个人博客">
-<meta property="og:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析。其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOExceptio">
+<meta property="og:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
-<meta property="og:updated_time" content="2019-07-10T06:16:47.165Z">
+<meta property="og:updated_time" content="2019-07-26T08:46:27.851Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="okhttp源码分析">
-<meta name="twitter:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析。其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOExceptio">
+<meta name="twitter:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
 <meta name="twitter:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
 
 
@@ -355,7 +355,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-07-10 14:16:47" itemprop="dateModified" datetime="2019-07-10T14:16:47+08:00">2019-07-10</time>
+                <time title="修改时间：2019-07-26 16:46:27" itemprop="dateModified" datetime="2019-07-26T16:46:27+08:00">2019-07-26</time>
               
             
           </span>
@@ -408,7 +408,7 @@
 
       
         <blockquote>
-<p>为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。<br>这里推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>。<br>其实这是我的第一篇博文，不好的地方希望可以得到大家指正。<br>莫名有些紧张是咋回事。</p>
+<p>为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。<br>这里推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>其实这是我的第一篇博文，不好的地方希望可以得到大家指正。<br>莫名有些紧张是咋回事。</p>
 </blockquote>
 <p><img src="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg" alt="流程图"></p>
 <h1 id="普通的GET请求"><a href="#普通的GET请求" class="headerlink" title="普通的GET请求"></a>普通的GET请求</h1><p>这是用okhttp写的一个同步请求,相信大家都很熟悉：</p>
@@ -500,24 +500,33 @@ public Response execute() throws IOException {
 <pre><code>Response getResponseWithInterceptorChain() throws IOException {
     // Build a full stack of interceptors.
     List&lt;Interceptor&gt; interceptors = new ArrayList&lt;&gt;();
+    //配置client时设置的interceptors
     interceptors.addAll(client.interceptors());
+    //负责失败重试以及重定向
     interceptors.add(retryAndFollowUpInterceptor);
+    //负责把用户构造的请求转换为发送到服务器的请求、把服务器返回的响应转换为用户友好的响应
     interceptors.add(new BridgeInterceptor(client.cookieJar()));
+    //负责读取缓存直接返回、更新缓存
     interceptors.add(new CacheInterceptor(client.internalCache()));
+    //负责和服务器建立连接
     interceptors.add(new ConnectInterceptor(client));
     if (!forWebSocket) {
+      //配置 OkHttpClient 时设置的
       interceptors.addAll(client.networkInterceptors());
     }
+    //负责向服务器发送请求数据、从服务器读取响应数据的
     interceptors.add(new CallServerInterceptor(forWebSocket));
 
     Interceptor.Chain chain = new RealInterceptorChain(interceptors, null, null, null, 0,
         originalRequest, this, eventListener, client.connectTimeoutMillis(),
         client.readTimeoutMillis(), client.writeTimeoutMillis());
-
+    //开启链式调用
     return chain.proceed(originalRequest);
 }
-</code></pre><p>哎呦，出现了List&lt;Interceptor&gt;，熟悉的东西，大家都使用这个玩意儿拦截请求，在数据返回前做些操作，<code>interceptors.addAll(client.interceptors());</code>便将我们自己添加的<code>Interceptor</code>加进了集合中，然后新建了<code>RealInterceptorChain</code>并且调用<code>proceed()</code>方法。先看看它的构造方法。</p>
-<pre><code> public RealInterceptorChain(List&lt;Interceptor&gt; interceptors, StreamAllocation streamAllocation,
+</code></pre><p>最终新建<code>RealInterceptorChain</code>调用了<code>proceed()</code>方法</p>
+<p>#RealInterceptorChain#</p>
+<pre><code>//一如既往的是初始化各种对象。
+public RealInterceptorChain(List&lt;Interceptor&gt; interceptors, StreamAllocation streamAllocation,
   HttpCodec httpCodec, RealConnection connection, int index, Request request, Call call,
   EventListener eventListener, int connectTimeout, int readTimeout, int writeTimeout) {
     this.interceptors = interceptors;
@@ -532,13 +541,13 @@ public Response execute() throws IOException {
     this.readTimeout = readTimeout;
     this.writeTimeout = writeTimeout;
 }
-</code></pre><p>一如既往的是初始化各种对象。直接来到它的<code>proceed()</code>看看是做了什么</p>
-<pre><code>@Override public Response proceed(Request request) throws IOException {
+
+@Override 
+public Response proceed(Request request) throws IOException {
     return proceed(request, streamAllocation, httpCodec, connection);
 }
 
-public Response proceed(Request request, StreamAllocation streamAllocation, HttpCodec httpCodec,
-  RealConnection connection) throws IOException {
+public Response proceed(Request request, StreamAllocation streamAllocation, HttpCodec httpCodec,RealConnection connection) throws IOException {
     if (index &gt;= interceptors.size()) throw new AssertionError();
 
     calls++;
@@ -556,6 +565,7 @@ public Response proceed(Request request, StreamAllocation streamAllocation, Http
     }
 
     // Call the next interceptor in the chain.
+    //调用下一个interceptor
     RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
         connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
         writeTimeout);
@@ -580,7 +590,247 @@ public Response proceed(Request request, StreamAllocation streamAllocation, Http
 
     return response;
 }
-</code></pre>
+</code></pre><p>关键代码在这里</p>
+<pre><code>// Call the next interceptor in the chain.
+//调用下一个链
+RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
+    connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
+    writeTimeout);
+Interceptor interceptor = interceptors.get(index);
+Response response = interceptor.intercept(next);
+</code></pre><p>实例化下一个拦截器对应的<code>RealInterceptorChain</code>并传给当前的拦截器。</p>
+<p>调用当前拦截器的<code>intercept()</code>方法并传入<code>RealInterceptorChain</code>。</p>
+<p>#RetryAndFollowUpInterceptor</p>
+<p>除了我们自己添加的interceptor，第一个执行的是<code>retryAndFollowUpInterceptor</code>,看看它的<code>intercept</code>方法做了些什么。</p>
+<pre><code>@Override 
+public Response intercept(Chain chain) throws IOException {
+    Request request = chain.request();
+    //通过入参得到 RealInterceptorChain
+    RealInterceptorChain realChain = (RealInterceptorChain) chain;
+    Call call = realChain.call();
+    EventListener eventListener = realChain.eventListener();
+
+    StreamAllocation streamAllocation = new StreamAllocation(client.connectionPool(),
+        createAddress(request.url()), call, eventListener, callStackTrace);
+    this.streamAllocation = streamAllocation;
+
+    int followUpCount = 0;
+    Response priorResponse = null;
+    while (true) {
+      if (canceled) {
+        streamAllocation.release();
+        throw new IOException(&quot;Canceled&quot;);
+      }
+
+      Response response;
+      boolean releaseConnection = true;
+      try {
+        //进行链式调用，获取返回值
+        response = realChain.proceed(request, streamAllocation, null, null);
+        releaseConnection = false;
+      } catch (RouteException e) {
+        // The attempt to connect via a route failed. The request will not have been sent.
+        if (!recover(e.getLastConnectException(), streamAllocation, false, request)) {
+          throw e.getFirstConnectException();
+        }
+        releaseConnection = false;
+        continue;
+      } catch (IOException e) {
+        // An attempt to communicate with a server failed. The request may have been sent.
+        boolean requestSendStarted = !(e instanceof ConnectionShutdownException);
+        if (!recover(e, streamAllocation, requestSendStarted, request)) throw e;
+        releaseConnection = false;
+        continue;
+      } finally {
+        // We&apos;re throwing an unchecked exception. Release any resources.
+        if (releaseConnection) {
+          streamAllocation.streamFailed(null);
+          streamAllocation.release();
+        }
+      }
+
+      // Attach the prior response if it exists. Such responses never have a body.
+      if (priorResponse != null) {
+        response = response.newBuilder()
+            .priorResponse(priorResponse.newBuilder()
+                    .body(null)
+                    .build())
+            .build();
+      }
+
+      Request followUp;
+      try {
+        followUp = followUpRequest(response, streamAllocation.route());
+      } catch (IOException e) {
+        streamAllocation.release();
+        throw e;
+      }
+
+      if (followUp == null) {
+        streamAllocation.release();
+        return response;
+      }
+
+      closeQuietly(response.body());
+
+      if (++followUpCount &gt; MAX_FOLLOW_UPS) {
+        streamAllocation.release();
+        throw new ProtocolException(&quot;Too many follow-up requests: &quot; + followUpCount);
+      }
+
+      if (followUp.body() instanceof UnrepeatableRequestBody) {
+        streamAllocation.release();
+        throw new HttpRetryException(&quot;Cannot retry streamed HTTP body&quot;, response.code());
+      }
+
+      if (!sameConnection(response, followUp.url())) {
+        streamAllocation.release();
+        streamAllocation = new StreamAllocation(client.connectionPool(),
+            createAddress(followUp.url()), call, eventListener, callStackTrace);
+        this.streamAllocation = streamAllocation;
+      } else if (streamAllocation.codec() != null) {
+        throw new IllegalStateException(&quot;Closing the body of &quot; + response
+            + &quot; didn&apos;t close its backing stream. Bad interceptor?&quot;);
+      }
+
+      request = followUp;
+      priorResponse = response;
+    }
+}
+</code></pre><p>后面一系列自带的<code>Interceptor</code>先放着哈。</p>
+<p>#BridgeInterceptor:将请求返回值转换为可被识别的格式</p>
+<p>#CacheInterceptor:缓存相关</p>
+<p>#ConnectInterceptor:服务器建立连接</p>
+<p>#networkInterceptors:配置 OkHttpClient 时设置的</p>
+<p>#CallServerInterceptor:和服务器交互的</p>
+<p>#异步请求的流程：</p>
+<pre><code>okHttpClient.newCall(request).enqueue(new Callback() {
+        @Override
+        public void onFailure(Call call, IOException e) {
+
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException {
+
+        }
+});
+</code></pre><p>与同步请求相同由<code>RealCall</code>调用<code>enqueue()</code>传入一个<code>CallBack</code></p>
+<pre><code>@Override public void enqueue(Callback responseCallback) {
+    synchronized (this) {
+      if (executed) throw new IllegalStateException(&quot;Already Executed&quot;);
+      executed = true;
+    }
+    captureCallStackTrace();
+    eventListener.callStart(this);
+    client.dispatcher().enqueue(new AsyncCall(responseCallback));
+}
+</code></pre><p>可以看到咱们传入的 <code>callback</code> 被构造成 <code>AsyncCall</code> 入参到<code>enqueue</code>方法里了，咱们进入<code>enqueue</code>中看看</p>
+<pre><code>void enqueue(AsyncCall call) {
+    synchronized (this) {
+      //加入准备好的数组
+      readyAsyncCalls.add(call);
+    }
+    promoteAndExecute();
+}
+
+private boolean promoteAndExecute() {
+    assert (!Thread.holdsLock(this));
+
+    List&lt;AsyncCall&gt; executableCalls = new ArrayList&lt;&gt;();
+    boolean isRunning;
+    synchronized (this) {
+      for (Iterator&lt;AsyncCall&gt; i = readyAsyncCalls.iterator(); i.hasNext(); ) {
+        AsyncCall asyncCall = i.next();
+
+        if (runningAsyncCalls.size() &gt;= maxRequests) break; // Max capacity.
+        if (runningCallsForHost(asyncCall) &gt;= maxRequestsPerHost) continue; // Host max capacity.
+
+        i.remove();
+        executableCalls.add(asyncCall);
+        runningAsyncCalls.add(asyncCall);
+      }
+      isRunning = runningCallsCount() &gt; 0;
+    }
+
+    for (int i = 0, size = executableCalls.size(); i &lt; size; i++) {
+      AsyncCall asyncCall = executableCalls.get(i);
+      asyncCall.executeOn(executorService());
+    }
+
+    return isRunning;
+}
+</code></pre><p><code>AsyncCall</code>加入到线程池执行。现在再看AsynCall的代码，它是RealCall中的内部类:</p>
+<pre><code>final class AsyncCall extends NamedRunnable {
+    private final Callback responseCallback;
+
+    AsyncCall(Callback responseCallback) {
+      super(&quot;OkHttp %s&quot;, redactedUrl());
+      this.responseCallback = responseCallback;
+    }
+
+    String host() {
+      return originalRequest.url().host();
+    }
+
+    Request request() {
+      return originalRequest;
+    }
+
+    RealCall get() {
+      return RealCall.this;
+    }
+
+    /**
+     * Attempt to enqueue this async call on {@code executorService}. This will attempt to clean up
+     * if the executor has been shut down by reporting the call as failed.
+     */
+    void executeOn(ExecutorService executorService) {
+      assert (!Thread.holdsLock(client.dispatcher()));
+      boolean success = false;
+      try {
+        executorService.execute(this);
+        success = true;
+      } catch (RejectedExecutionException e) {
+        InterruptedIOException ioException = new InterruptedIOException(&quot;executor rejected&quot;);
+        ioException.initCause(e);
+        eventListener.callFailed(RealCall.this, ioException);
+        responseCallback.onFailure(RealCall.this, ioException);
+      } finally {
+        if (!success) {
+          client.dispatcher().finished(this); // This call is no longer running!
+        }
+      }
+    }
+
+    @Override protected void execute() {
+      boolean signalledCallback = false;
+      timeout.enter();
+      try {
+        Response response = getResponseWithInterceptorChain();
+        if (retryAndFollowUpInterceptor.isCanceled()) {
+          signalledCallback = true;
+          responseCallback.onFailure(RealCall.this, new IOException(&quot;Canceled&quot;));
+        } else {
+          signalledCallback = true;
+          responseCallback.onResponse(RealCall.this, response);
+        }
+      } catch (IOException e) {
+        e = timeoutExit(e);
+        if (signalledCallback) {
+          // Do not signal the callback twice!
+          Platform.get().log(INFO, &quot;Callback failure for &quot; + toLoggableString(), e);
+        } else {
+          eventListener.callFailed(RealCall.this, e);
+          responseCallback.onFailure(RealCall.this, e);
+        }
+      } finally {
+        client.dispatcher().finished(this);
+      }
+    }
+}
+</code></pre><p><code>AysncCall</code>中的<code>execute()</code>中的方法，同样是通过<code>Response response = getResponseWithInterceptorChain();</code>来获得<code>response</code>，这样异步任务也同样通过了<code>interceptor</code>，剩下的流程就和上面一样了。</p>
+
       
     </div>
 
@@ -625,10 +875,6 @@ public Response proceed(Request request, StreamAllocation streamAllocation, Http
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/07/10/英语学习计划/" rel="prev" title="英语学习计划">
-                英语学习计划 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -698,7 +944,7 @@ public Response proceed(Request request, StreamAllocation streamAllocation, Http
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">4</span>
+                    <span class="site-state-item-count">3</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
