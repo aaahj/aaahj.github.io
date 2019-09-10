@@ -96,19 +96,19 @@
 
 
 
-  <meta name="description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
+  <meta name="description" content="看一遍okhttp的源码，做个记录推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~欢迎交流~   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOException {     //新建OKHttpClient客户端     OkHttpClient">
 <meta name="keywords" content="源码分析">
 <meta property="og:type" content="article">
 <meta property="og:title" content="okhttp源码分析">
 <meta property="og:url" content="https://hujian222.github.io/2019/07/09/okhttp源码分析/index.html">
 <meta property="og:site_name" content="个人博客">
-<meta property="og:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
+<meta property="og:description" content="看一遍okhttp的源码，做个记录推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~欢迎交流~   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOException {     //新建OKHttpClient客户端     OkHttpClient">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
-<meta property="og:updated_time" content="2019-07-26T08:46:27.851Z">
+<meta property="og:updated_time" content="2019-08-21T08:24:34.497Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="okhttp源码分析">
-<meta name="twitter:description" content="为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。这里推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~其实这是我的第一篇博文，不好的地方希望可以得到大家指正。莫名有些紧张是咋回事。   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throw">
+<meta name="twitter:description" content="看一遍okhttp的源码，做个记录推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~欢迎交流~   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： //HTTP GET public String get(String url) throws IOException {     //新建OKHttpClient客户端     OkHttpClient">
 <meta name="twitter:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
 
 
@@ -355,7 +355,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-07-26 16:46:27" itemprop="dateModified" datetime="2019-07-26T16:46:27+08:00">2019-07-26</time>
+                <time title="修改时间：2019-08-21 16:24:34" itemprop="dateModified" datetime="2019-08-21T16:24:34+08:00">2019-08-21</time>
               
             
           </span>
@@ -408,7 +408,7 @@
 
       
         <blockquote>
-<p>为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。<br>这里推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>其实这是我的第一篇博文，不好的地方希望可以得到大家指正。<br>莫名有些紧张是咋回事。</p>
+<p>看一遍okhttp的源码，做个记录<br>推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>欢迎交流~</p>
 </blockquote>
 <p><img src="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg" alt="流程图"></p>
 <h1 id="普通的GET请求"><a href="#普通的GET请求" class="headerlink" title="普通的GET请求"></a>普通的GET请求</h1><p>这是用okhttp写的一个同步请求,相信大家都很熟悉：</p>
@@ -461,7 +461,7 @@ public Builder() {
   pingInterval = 0;
 }
 </code></pre><p>从这里可以看出来，几乎所有用到的类都在<code>OkHttpClient</code>里，你可以设置这些值达到自己需要的效果。</p>
-<p>而真正的调用网络的是这里<code>Response response = client.newCall(request).execute();</code></p>
+<p>#RealCall：真正的请求执行者。<br>而真正的调用网络的是这里<code>Response response = client.newCall(request).execute();</code></p>
 <pre><code>@Override 
 public Call newCall(Request request) {
     return RealCall.newRealCall(this, request, false /* for web socket */);
@@ -697,7 +697,7 @@ public Response intercept(Chain chain) throws IOException {
       priorResponse = response;
     }
 }
-</code></pre><p>后面一系列自带的<code>Interceptor</code>先放着哈。</p>
+</code></pre><p>官方很多功能也是通过<code>Interceptor</code>实现的,一个好的设计模式是能极大的提升代码的扩展性的。（记下来）<br>大致看了一下功能。</p>
 <p>#BridgeInterceptor:将请求返回值转换为可被识别的格式</p>
 <p>#CacheInterceptor:缓存相关</p>
 <p>#ConnectInterceptor:服务器建立连接</p>
@@ -830,6 +830,8 @@ private boolean promoteAndExecute() {
     }
 }
 </code></pre><p><code>AysncCall</code>中的<code>execute()</code>中的方法，同样是通过<code>Response response = getResponseWithInterceptorChain();</code>来获得<code>response</code>，这样异步任务也同样通过了<code>interceptor</code>，剩下的流程就和上面一样了。</p>
+<p>#总结<br>这就写完了，代码太多了。自己写的字好像也没几句。<br>OkHttp 通过链式调用 <code>Interceptor</code> 实现了大多数的功能，例如重定向，缓存，与服务器建立连接与交互。</p>
+<p>写着写着发现自己写的东西和看过的文章好像，没什么区别。真是头疼。</p>
 
       
     </div>
@@ -875,6 +877,10 @@ private boolean promoteAndExecute() {
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/09/02/Retrofit源码分析/" rel="prev" title="Retrofit源码分析">
+                Retrofit源码分析 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -944,7 +950,7 @@ private boolean promoteAndExecute() {
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-count">4</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>

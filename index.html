@@ -293,6 +293,453 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://hujian222.github.io/2019/09/02/Retrofit源码分析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="hujian222">
+      <meta itemprop="description" content="andorid 小学生">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/2019/09/02/Retrofit源码分析/" class="post-title-link" itemprop="url">Retrofit源码分析</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-09-02 16:03:28" itemprop="dateCreated datePublished" datetime="2019-09-02T16:03:28+08:00">2019-09-02</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-09-10 16:08:31" itemprop="dateModified" datetime="2019-09-10T16:08:31+08:00">2019-09-10</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/android/" itemprop="url" rel="index"><span itemprop="name">android</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <blockquote>
+<p>本文基于Retrofit2.5分析<br>结合Rxjava2.x</p>
+</blockquote>
+<p>本文将分析retrofi的工作原理，集合Rxjava2.x深入理解。</p>
+<h1 id="基本使用"><a href="#基本使用" class="headerlink" title="基本使用"></a>基本使用</h1><pre><code>com.squareup.retrofit2:retrofit:2.5.0  
+com.squareup.retrofit2:converter-gson:2.5.0  
+com.squareup.retrofit2:adapter-rxjava2:2.5.0
+
+public interface ApiInterface {
+    @FormUrlEncoded
+    @POST(&quot;app/banner&quot;)
+    Observable&lt;HttpResult&lt;List&lt;BannerEntity&gt;&gt;&gt; getBanner(@Field(&quot;id&quot;) String a);
+}
+
+//初始化retrofit
+Retrofit retrofit = new Retrofit.Builder()
+            .client(okHttpClient)
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(&quot;www&quot;)
+            .build();
+
+//生成ApiInterface
+ApiInterface apiInterface = retrofit.create(ApiInterface.class);
+
+//发起请求，获取接口数据
+Observable&lt;HttpResult&lt;List&lt;BannerEntity&gt;&gt;&gt; banner = apiInterface.getBanner(&quot;aaa&quot;);
+banner~~~
+</code></pre><h1 id="retrofit-create"><a href="#retrofit-create" class="headerlink" title="retrofit.create"></a>retrofit.create</h1><p>看看<code>retrofit.create</code>里发生了什么，返回的对象怎么就可以获取网络数据了呢</p>
+<pre><code>public &lt;T&gt; T create(final Class&lt;T&gt; service) {
+    Utils.validateServiceInterface(service);
+    if (validateEagerly) {
+      eagerlyValidateMethods(service);
+    }
+    return (T) Proxy.newProxyInstance(service.getClassLoader(), new Class&lt;?&gt;[]{ service },
+        new InvocationHandler() {
+          private final Platform platform = Platform.get();
+          private final Object[] emptyArgs = new Object[0];
+
+          @Override public Object invoke(Object proxy, Method method, @Nullable Object[] args)
+              throws Throwable {
+            // If the method is a method from Object then defer to normal invocation.
+            if (method.getDeclaringClass() == Object.class) {
+              return method.invoke(this, args);
+            }
+            if (platform.isDefaultMethod(method)) {
+              return platform.invokeDefaultMethod(method, service, proxy, args);
+            }
+            //关键代码,生成ServiceMethod并调用invoke
+            return loadServiceMethod(method).invoke(args != null ? args : emptyArgs);
+          }
+        });
+}
+</code></pre><p>这里使用了动态代理，对于代理我的理解为被代理的对象<code>service</code>调用的每个方法都会回调此处的逻辑实现。关键代码在<code>loadServiceMethod(method).invoke(args != null ? args : emptyArgs)</code>。</p>
+<pre><code>ServiceMethod&lt;?&gt; loadServiceMethod(Method method) {
+   //获取缓存中的对象，加速加载
+   ServiceMethod&lt;?&gt; result = serviceMethodCache.get(method);
+   if (result != null) return result;
+
+   synchronized (serviceMethodCache) {
+     result = serviceMethodCache.get(method);
+     if (result == null) {
+       //没有缓存，则新建
+       result = ServiceMethod.parseAnnotations(this, method);
+       //加入缓存
+       serviceMethodCache.put(method, result);
+     }
+   }
+   return result;
+ }
+</code></pre><h1 id="ServiceMethod的职责"><a href="#ServiceMethod的职责" class="headerlink" title="ServiceMethod的职责"></a>ServiceMethod的职责</h1><p>再看如何新建<code>ServiceMethod</code>的。</p>
+<pre><code>abstract class ServiceMethod&lt;T&gt; {
+  static &lt;T&gt; ServiceMethod&lt;T&gt; parseAnnotations(Retrofit retrofit, Method method) {
+    RequestFactory requestFactory = RequestFactory.parseAnnotations(retrofit, method);
+
+    Type returnType = method.getGenericReturnType();
+    if (Utils.hasUnresolvableType(returnType)) {
+      throw methodError(method,
+          &quot;Method return type must not include a type variable or wildcard: %s&quot;, returnType);
+    }
+    if (returnType == void.class) {
+      throw methodError(method, &quot;Service methods cannot return void.&quot;);
+    }
+
+    return HttpServiceMethod.parseAnnotations(retrofit, method, requestFactory);
+  }
+
+  abstract T invoke(Object[] args);
+}
+</code></pre><p>实际中使用的下方的<code>HttpServiceMethod</code></p>
+<h1 id="HttpServiceMethod的作用"><a href="#HttpServiceMethod的作用" class="headerlink" title="HttpServiceMethod的作用"></a>HttpServiceMethod的作用</h1><p><code>HttpServiceMethod</code>主要承担了分析对应的<code>method</code>的所有参数的功能，例如注解（@GET），传入的参数，另外还负责获取 <code>callAdapter</code>,<code>responseConverter</code>等<code>Retrofit</code>配置，可以说它承载了后续 Http 请求所需的一切参数。</p>
+<pre><code>static &lt;ResponseT, ReturnT&gt; HttpServiceMethod&lt;ResponseT, ReturnT&gt; parseAnnotations(
+      Retrofit retrofit, Method method, RequestFactory requestFactory) {
+    CallAdapter&lt;ResponseT, ReturnT&gt; callAdapter = createCallAdapter(retrofit, method);
+    Type responseType = callAdapter.responseType();
+    if (responseType == Response.class || responseType == okhttp3.Response.class) {
+      throw methodError(method, &quot;&apos;&quot;
+          + Utils.getRawType(responseType).getName()
+          + &quot;&apos; is not a valid response body type. Did you mean ResponseBody?&quot;);
+    }
+    if (requestFactory.httpMethod.equals(&quot;HEAD&quot;) &amp;&amp; !Void.class.equals(responseType)) {
+      throw methodError(method, &quot;HEAD method must use Void as response type.&quot;);
+    }
+
+    Converter&lt;ResponseBody, ResponseT&gt; responseConverter =
+        createResponseConverter(retrofit, method, responseType);
+    //这里的callFactory即为初始化retrofit时传入的RxJava2CallAdapterFactory.create()生成
+    okhttp3.Call.Factory callFactory = retrofit.callFactory;
+    return new HttpServiceMethod&lt;&gt;(requestFactory, callFactory, callAdapter, responseConverter);
+  }
+
+//被调用的invoke方法
+@Override 
+ReturnT invoke(Object[] args) {
+    return callAdapter.adapt(
+        new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter));
+}
+</code></pre><p>#OkHttpCall<br>接着看<code>new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter))</code>,为<code>HttpServiceMethod</code>和参数生成了一个<code>OkHttpCall</code>,从名字来看它是对 <code>OkHttp3.Call</code> 的组合包装,事实上，它也确实是。(<code>OkHttpCall</code>中有一个成员<code>okhttp3.Call rawCall</code>)。</p>
+<p>#callAdapter.adapt<br><code>return loadServiceMethod(method).invoke(args != null ? args : emptyArgs);</code>最终调用为</p>
+<p><code>return callAdapter.adapt(new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter));</code></p>
+<p>到这里就要真正开始行动了。</p>
+<p>这里涉及到的<code>callAdapter</code>是有我们初始化Retrofit时传入的<code>RxJava2CallAdapterFactory.create()</code>生成，实例为<code>RxJavaCallAdapterFactory</code>。</p>
+<p>所以这里<code>callAdapter</code>为<code>RxJava2CallAdapter.get()</code>返回的<code>RxJava2CallAdapter</code>。</p>
+<p>再来分析<code>RxJava2CallAdapter</code>的<code>adapt()</code></p>
+<pre><code>@Override 
+public Object adapt(Call&lt;R&gt; call) {
+    //判断生成何种Observable
+    Observable&lt;Response&lt;R&gt;&gt; responseObservable = isAsync
+        ? new CallEnqueueObservable&lt;&gt;(call)
+        : new CallExecuteObservable&lt;&gt;(call);
+
+    Observable&lt;?&gt; observable;
+    if (isResult) {
+      observable = new ResultObservable&lt;&gt;(responseObservable);
+    } else if (isBody) {
+      observable = new BodyObservable&lt;&gt;(responseObservable);
+    } else {
+      observable = responseObservable;
+    }
+
+    if (scheduler != null) {
+      observable = observable.subscribeOn(scheduler);
+    }
+
+    if (isFlowable) {
+      return observable.toFlowable(BackpressureStrategy.LATEST);
+    }
+    if (isSingle) {
+      return observable.singleOrError();
+    }
+    if (isMaybe) {
+      return observable.singleElement();
+    }
+    if (isCompletable) {
+      return observable.ignoreElements();
+    }
+    return RxJavaPlugins.onAssembly(observable);
+  }
+</code></pre><p>看到在这里通过<code>new CallEnqueueObservable&lt;&gt;(call)</code>生成对象并返回。<br>来看<code>CallEnqueueObservable</code>:</p>
+<pre><code>private final Call&lt;T&gt; originalCall;
+
+CallEnqueueObservable(Call&lt;T&gt; originalCall) {
+    this.originalCall = originalCall;
+}
+//复写Observable的方法，在订阅时触发该方法
+@Override 
+protected void subscribeActual(Observer&lt;? super Response&lt;T&gt;&gt; observer) {
+    // Since Call is a one-shot type, clone it for each new observer.
+    //clone传入的OkhttpCall
+    Call&lt;T&gt; call = originalCall.clone();
+    //构建CallCallback
+    CallCallback&lt;T&gt; callback = new CallCallback&lt;&gt;(call, observer);
+    observer.onSubscribe(callback);
+    if (!callback.isDisposed()) {
+      //这里是OkhttpCall，也是okhttp实际开始工作的开始
+      call.enqueue(callback);
+    }
+}
+</code></pre><p>这里的<code>OkHttpCall</code>是在<code>HttpServiceMethod</code>中生成的<code>OkhttpCall</code>。</p>
+<p><code>call.enqueue</code>开始了数据的获取。</p>
+<pre><code>@Override 
+public void enqueue(final Callback&lt;T&gt; callback) {
+    checkNotNull(callback, &quot;callback == null&quot;);
+
+    okhttp3.Call call;
+    Throwable failure;
+
+    synchronized (this) {
+      if (executed) throw new IllegalStateException(&quot;Already executed.&quot;);
+      executed = true;
+
+      call = rawCall;
+      failure = creationFailure;
+      if (call == null &amp;&amp; failure == null) {
+        try {
+          call = rawCall = createRawCall();
+        } catch (Throwable t) {
+          throwIfFatal(t);
+          failure = creationFailure = t;
+        }
+      }
+    }
+
+    if (failure != null) {
+      callback.onFailure(this, failure);
+      return;
+    }
+
+    if (canceled) {
+      call.cancel();
+    }
+
+    //okhttp的调用出现咯
+    call.enqueue(new okhttp3.Callback() {
+      @Override public void onResponse(okhttp3.Call call, okhttp3.Response rawResponse) {
+        Response&lt;T&gt; response;
+        try {
+          response = parseResponse(rawResponse);
+        } catch (Throwable e) {
+          throwIfFatal(e);
+          callFailure(e);
+          return;
+        }
+
+        try {
+          //将数据返回给CallEnqueueObservable
+          callback.onResponse(OkHttpCall.this, response);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+      }
+
+      @Override public void onFailure(okhttp3.Call call, IOException e) {
+        callFailure(e);
+      }
+
+      private void callFailure(Throwable e) {
+        try {
+
+          callback.onFailure(OkHttpCall.this, e);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+      }
+    });
+}
+</code></pre><p>看到这里<code>okhttp</code>开始获取数据并将结果通过入参的<code>CallCallback</code>回调到<code>CallEnqueueObservable</code>中，<code>CallCallback</code>是<code>CallEnqueueObservable</code>内部类，看看它的<code>onResponse()</code>方法：</p>
+<pre><code>@Override 
+public void onResponse(Call&lt;T&gt; call, Response&lt;T&gt; response) {
+  if (disposed) return;
+
+  try {
+    observer.onNext(response);
+
+    if (!disposed) {
+      terminated = true;
+      observer.onComplete();
+    }
+  } catch (Throwable t) {
+    if (terminated) {
+      RxJavaPlugins.onError(t);
+    } else if (!disposed) {
+      try {
+        observer.onError(t);
+      } catch (Throwable inner) {
+        Exceptions.throwIfFatal(inner);
+        RxJavaPlugins.onError(new CompositeException(t, inner));
+      }
+    }
+  }
+}
+</code></pre><p>可以看到是将okhttp得到的结果返回给了<code>Observable</code>的观察者。</p>
+<p>到这里也算是缕清了为啥<code>Retrofit</code>和<code>RxJava</code>的合作关系及其原理。</p>
+<p>总结一下调用流程</p>
+<p><img src="https://ws1.sinaimg.cn/large/e825fefdgy1g6uhit7dnzj20ak0emt98.jpg" alt="retrofit与rxjava原理流程图.jpg"></p>
+
+          
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://hujian222.github.io/2019/07/09/okhttp源码分析/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -355,7 +802,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-07-26 16:46:27" itemprop="dateModified" datetime="2019-07-26T16:46:27+08:00">2019-07-26</time>
+                <time title="修改时间：2019-08-21 16:24:34" itemprop="dateModified" datetime="2019-08-21T16:24:34+08:00">2019-08-21</time>
               
             
           </span>
@@ -410,7 +857,7 @@
         
           
             <blockquote>
-<p>为了提升自己的技术水平，决定撸一遍okhttp的源码，和大家分享自己的所得。<br>这里推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>其实这是我的第一篇博文，不好的地方希望可以得到大家指正。<br>莫名有些紧张是咋回事。</p>
+<p>看一遍okhttp的源码，做个记录<br>推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee" target="_blank" rel="noopener">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>欢迎交流~</p>
 </blockquote>
 <p><img src="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg" alt="流程图"></p>
 <h1 id="普通的GET请求"><a href="#普通的GET请求" class="headerlink" title="普通的GET请求"></a>普通的GET请求</h1><p>这是用okhttp写的一个同步请求,相信大家都很熟悉：</p>
@@ -463,7 +910,7 @@ public Builder() {
   pingInterval = 0;
 }
 </code></pre><p>从这里可以看出来，几乎所有用到的类都在<code>OkHttpClient</code>里，你可以设置这些值达到自己需要的效果。</p>
-<p>而真正的调用网络的是这里<code>Response response = client.newCall(request).execute();</code></p>
+<p>#RealCall：真正的请求执行者。<br>而真正的调用网络的是这里<code>Response response = client.newCall(request).execute();</code></p>
 <pre><code>@Override 
 public Call newCall(Request request) {
     return RealCall.newRealCall(this, request, false /* for web socket */);
@@ -699,7 +1146,7 @@ public Response intercept(Chain chain) throws IOException {
       priorResponse = response;
     }
 }
-</code></pre><p>后面一系列自带的<code>Interceptor</code>先放着哈。</p>
+</code></pre><p>官方很多功能也是通过<code>Interceptor</code>实现的,一个好的设计模式是能极大的提升代码的扩展性的。（记下来）<br>大致看了一下功能。</p>
 <p>#BridgeInterceptor:将请求返回值转换为可被识别的格式</p>
 <p>#CacheInterceptor:缓存相关</p>
 <p>#ConnectInterceptor:服务器建立连接</p>
@@ -832,6 +1279,8 @@ private boolean promoteAndExecute() {
     }
 }
 </code></pre><p><code>AysncCall</code>中的<code>execute()</code>中的方法，同样是通过<code>Response response = getResponseWithInterceptorChain();</code>来获得<code>response</code>，这样异步任务也同样通过了<code>interceptor</code>，剩下的流程就和上面一样了。</p>
+<p>#总结<br>这就写完了，代码太多了。自己写的字好像也没几句。<br>OkHttp 通过链式调用 <code>Interceptor</code> 实现了大多数的功能，例如重定向，缓存，与服务器建立连接与交互。</p>
+<p>写着写着发现自己写的东西和看过的文章好像，没什么区别。真是头疼。</p>
 
           
         
@@ -1297,7 +1746,7 @@ private boolean promoteAndExecute() {
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-count">4</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
